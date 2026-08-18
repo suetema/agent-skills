@@ -1,0 +1,4 @@
+# Agents installed for CLAUDE CODE (work) -> ~/.claude/agents/<name>.md
+#
+# Format:  <name>  <path-to-a-single-.md-file>
+# Nothing listed yet. ECC ships 67 agents under ~/src/ECC/agents/ if you want any.

@@ -1,0 +1,15 @@
+# Skills installed for CLAUDE CODE (work).
+#
+# This file is the whole story for Claude Code: if a skill is not listed here it is
+# not installed there, and install.sh prunes any link it previously made.
+#
+# Format:  <name>  <path>
+#   path   ./relative-to-this-repo  |  ~/absolute  |  /absolute
+#   name   installed name — what /<name> becomes
+
+handoff  ./skills/handoff
+
+# Deliberately absent: market-research and deep-research are private-project tools,
+# tracked in ../opencode/skills.txt only. ECC's engineering skills likewise stay on
+# the opencode side; note ECC's `security-review` would also shadow Claude Code's
+# bundled skill of the same name.

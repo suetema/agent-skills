@@ -1,0 +1,28 @@
+# Skills installed for OPENCODE (private projects).
+#
+# This file is the whole story for opencode: if a skill is not listed here it is not
+# installed there, and install.sh prunes any link it previously made.
+#
+# Format:  <name>  <path>
+#   path   ./relative-to-this-repo  |  ~/absolute  |  /absolute
+#   name   installed name — what /<name> becomes
+
+# Authored in this repo
+handoff            ./skills/handoff
+
+# affaan-m/ECC (MIT) — cloned at ~/src/ECC. Private research tooling.
+market-research    ~/src/ECC/skills/market-research
+deep-research      ~/src/ECC/skills/deep-research      # needs firecrawl + exa MCPs; inert without them
+
+# affaan-m/ECC engineering skills, previously wired via opencode.json skills.paths.
+tdd-workflow       ~/src/ECC/skills/tdd-workflow
+security-review    ~/src/ECC/skills/security-review
+coding-standards   ~/src/ECC/skills/coding-standards
+frontend-patterns  ~/src/ECC/skills/frontend-patterns
+frontend-slides    ~/src/ECC/skills/frontend-slides
+backend-patterns   ~/src/ECC/skills/backend-patterns
+e2e-testing        ~/src/ECC/skills/e2e-testing
+verification-loop  ~/src/ECC/skills/verification-loop
+api-design         ~/src/ECC/skills/api-design
+strategic-compact  ~/src/ECC/skills/strategic-compact
+eval-harness       ~/src/ECC/skills/eval-harness

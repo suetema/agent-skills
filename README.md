@@ -1,14 +1,21 @@
 # agent-skills
 
-My agent skills, kept in one place and installed into both **Claude Code** and **opencode**.
+My agent skills and the record of which ones are installed where — **Claude Code** for work,
+**opencode** for private projects.
 
-One `SKILL.md` per skill is the single source of truth. `install.sh` symlinks it into each
-agent's load path, so editing the file in this repo takes effect in both immediately —
-no copying, no drift.
+**The two harnesses are managed separately and on purpose.** Claude Code is for work,
+opencode is for private projects, so each has its own manifest and neither inherits from the
+other. A skill installed in one is not installed in the other unless it is listed twice.
+
+Nothing is ever copied. `install.sh` symlinks each entry from wherever it already lives, so
+upstream repos stay the source of truth and editing a file here takes effect immediately.
 
 ```
-skills/<name>/SKILL.md      skills I maintain, shared by both harnesses
-external-skills.txt         skills I want but don't maintain — linked, never copied
+skills/<name>/SKILL.md      skills authored here
+claude/skills.txt           what is installed for Claude Code   (work)
+claude/agents.txt
+opencode/skills.txt         what is installed for opencode      (private)
+opencode/agents.txt
 opencode/command/<name>.md  thin wrapper so /<name> shows in opencode's prompter
 install.sh                  symlinks all of it into place
 ```
@@ -20,7 +27,8 @@ git clone https://github.com/suetema/agent-skills.git ~/src/agent-skills
 cd ~/src/agent-skills && ./install.sh
 ```
 
-Then reload: `/reload-skills` in Claude Code; opencode picks up skills on next start.
+Then reload: `/reload-skills` in Claude Code; restart opencode, which discovers skills,
+agents and commands at startup.
 
 ```bash
 ./install.sh              # link everything (idempotent)
@@ -30,71 +38,23 @@ Then reload: `/reload-skills` in Claude Code; opencode picks up skills on next s
 
 ## Skills
 
-### Maintained here
+### Claude Code (work) — `claude/skills.txt`
 
-| Skill | What it does |
+| Skill | Source |
 |---|---|
-| [`handoff`](skills/handoff/SKILL.md) | Compacts the session into a context-only briefing for a fresh session after `/clear`. The next agent reads it and **stops** — it does not resume the work. |
+| `handoff` | this repo |
 
-### Linked from elsewhere
+### opencode (private) — `opencode/skills.txt`
 
-Tracked in [`external-skills.txt`](external-skills.txt). This repo records *which* skills I
-want installed; the upstream repo keeps the content.
-
-| Skill | Source | Harnesses | Notes |
-|---|---|---|---|
-| `market-research` | affaan-m/ECC | both | Market sizing, competitor comparison, investor dossiers. No external dependencies. |
-| `deep-research` | affaan-m/ECC | both | Cited multi-source reports. **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
-| 11 engineering skills | affaan-m/ECC | opencode | `tdd-workflow`, `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |
-
-## Why two symlinks
-
-opencode's docs claim it reads `~/.claude/skills`. On **opencode 1.18.12 it does not.**
-Verified with `opencode debug skill` against probe skills planted in every candidate path:
-
-| Path | opencode 1.18.12 |
-|---|---|
-| `~/.config/opencode/skills/<name>/SKILL.md` | loaded |
-| `~/.agents/skills/<name>/SKILL.md` | loaded |
-| `<project>/.opencode/skills/`, `<project>/.agents/skills/` | loaded |
-| `skills.paths` entries in `opencode.json` | loaded |
-| `~/.claude/skills/<name>/SKILL.md` | **not loaded** |
-| `<project>/.claude/skills/` | **not loaded** |
-
-Symlinked skill directories are followed, so one file can serve both trees.
-Re-check with `opencode debug skill` after an opencode upgrade — if `~/.claude/skills`
-starts working, the second link becomes redundant (harmless either way).
-
-## Frontmatter compatibility
-
-Both agents read the same file. opencode recognizes only `name`, `description`, `license`,
-`compatibility`, and `metadata`, and **silently ignores** everything else — so the
-Claude-Code-specific fields are inert there rather than an error.
-
-| Field | Claude Code | opencode |
+| Skill | Source | Notes |
 |---|---|---|
-| `name`, `description` | honored | honored |
-| `metadata` (string→string) | ignored | honored |
-| `argument-hint` | honored | ignored |
-| `allowed-tools` | honored | ignored |
-| `disable-model-invocation` | honored | **ignored** — see below |
+| `handoff` | this repo | Also installed for Claude Code — listed in both manifests. |
+| `market-research` | affaan-m/ECC | Private-project tooling; deliberately not in Claude Code. |
+| `deep-research` | affaan-m/ECC | **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
+| 11 engineering skills | affaan-m/ECC | `tdd-workflow`, `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |
 
-### Keeping skills explicit-invocation-only in opencode
-
-`disable-model-invocation: true` stops Claude Code from firing a skill on its own.
-opencode has no equivalent field; use per-skill permission in `~/.config/opencode/opencode.json`:
-
-```json
-{
-  "permission": {
-    "skill": { "handoff": "ask" }
-  }
-}
-```
-
-`deny` would block your own explicit invocation too, so `ask` is the closer analogue.
-The skill's `description` also carries the constraint in prose, which is what a model
-actually reads when deciding whether to invoke.
+`security-review` is another reason the split matters: ECC's copy would shadow Claude Code's
+bundled skill of the same name, so it stays on the opencode side only.
 
 ## opencode: getting a skill into the `/` prompter
 
@@ -130,36 +90,43 @@ Because the wrapper asks the model to invoke the skill, `permission.skill.handof
 friction outweighs the protection, set it to `"allow"` — the skill's `description` still
 carries "use only when the user explicitly asks", which is all opencode gives you.
 
-## Tracking skills you don't maintain
+## How the manifests work
 
-`external-skills.txt` is a manifest, not a vendor directory — no content is copied, so there
-is no fork to keep in sync and no license question. `install.sh` symlinks each entry into both
-harnesses; `git pull` in the upstream repo is what updates them.
+Each harness has its own pair of files, and each is the whole story for that harness:
+
+| Manifest | Installs to |
+|---|---|
+| `claude/skills.txt` | `~/.claude/skills/<name>/` |
+| `claude/agents.txt` | `~/.claude/agents/<name>.md` |
+| `opencode/skills.txt` | `~/.config/opencode/skills/<name>/` |
+| `opencode/agents.txt` | `~/.config/opencode/agent/<name>.md` (singular `agent`, unlike Claude Code) |
 
 ```
-# <name>  <path>  [targets]        ~ expands to $HOME, trailing # comments ignored
-market-research  ~/src/ECC/skills/market-research  both
-tdd-workflow     ~/src/ECC/skills/tdd-workflow     opencode
+# <name>  <path>
+handoff          ./skills/handoff                  # repo-relative
+market-research  ~/src/ECC/skills/market-research   # anywhere on disk
 ```
 
-The `<name>` column is the installed name, so `/<name>` is what you type. It does not have to
-match the upstream directory — rename on the way in if two sources collide.
+The `<name>` column is the installed name, so `/<name>` is what you type. It need not match the
+upstream directory — rename on the way in if two sources collide.
 
-`targets` is `both` (default), `claude`, `opencode`, or `claude,opencode`. Per-harness scope
-matters when a name is already taken: ECC's `security-review` would shadow Claude Code's
-bundled skill of the same name, so it stays opencode-only.
+**Manifests are authoritative, not additive.** Delete a line, re-run, and the link is pruned
+from that harness with `pruned <path> (not listed for <harness>)`. Pruning only touches links
+this repo owns — links pointing inside the repo, or at a path some manifest mentions. A skill
+you linked by hand from somewhere unlisted is left alone.
 
-**The manifest is authoritative.** Narrow an entry's targets and the next run prunes its link
-from the harness it no longer names, reporting `pruned <path> (no longer targeted)`. Nothing
-outside this repo decides what is installed.
+To install the same skill in both harnesses, list it in both files. To move one from work to
+private, move the line and re-run — the old link is pruned in the same pass.
 
-If a source repo isn't cloned on this machine, install.sh prints `MISSING <name> -> <path>`,
-counts it as skipped, and creates no broken link. Exit status stays 0, so a partial checkout
-doesn't fail the install. `--uninstall` removes external links too: it matches on the link
-target, which keeps working even if the upstream checkout is gone.
+If a source repo isn't cloned on this machine, install.sh prints `MISSING`, counts it skipped,
+and creates no broken link. Exit status stays 0, so a partial checkout doesn't fail the install.
 
-Prompter visibility works the same as for local skills — add `opencode/command/<name>.md`
-that defers to the skill. Nothing about being external changes that.
+### Agents
+
+Both agent manifests are currently empty, for different reasons. Claude Code has no agents
+installed. opencode's agents (`architect`, `code-reviewer`, `explore`, …) come from the ECC
+plugin at `~/.config/opencode/plugins/ecc-global.ts` rather than from files in its agent
+directory, so there is nothing there to take over yet. The plumbing is in place for when there is.
 
 ### Migrating ECC's opencode skills into this repo (2026-08-18)
 
@@ -244,8 +211,10 @@ rather than degrading it in one harness by accident.
 ## Adding a skill
 
 1. `mkdir -p skills/<name>` and write `SKILL.md` with at minimum `name` + `description`.
-2. For opencode prompter visibility, add `opencode/command/<name>.md` that says
+2. List it in `claude/skills.txt`, `opencode/skills.txt`, or both — that choice is what
+   decides where it gets installed.
+3. For opencode prompter visibility, add `opencode/command/<name>.md` that says
    "Invoke the `<name>` skill and follow it exactly."
-3. `./install.sh`, then restart opencode (it discovers at startup).
-4. Commit. Other machines get it with `git pull` + `./install.sh` for new skills;
-   edits to existing files need no re-install.
+4. `./install.sh`, then restart opencode (it discovers at startup).
+5. Commit. Other machines get it with `git pull` + `./install.sh`; edits to files already
+   linked need no re-install.

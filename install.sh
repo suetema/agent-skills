@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
-# Install this repo's skills into Claude Code and opencode, link the externally
-# maintained skills listed in external-skills.txt, and install the opencode command
-# wrappers that put each skill in opencode's / prompter.
+# Install skills and agents into Claude Code and opencode from two independent
+# per-harness manifests, plus opencode's command wrappers.
 #
-# Idempotent, and authoritative: an entry that stops targeting a harness has its
-# link pruned there on the next run.
+#   claude/skills.txt    -> ~/.claude/skills/<name>            (work)
+#   claude/agents.txt    -> ~/.claude/agents/<name>.md
+#   opencode/skills.txt  -> ~/.config/opencode/skills/<name>   (private)
+#   opencode/agents.txt  -> ~/.config/opencode/agent/<name>.md
+#   opencode/command/    -> ~/.config/opencode/command/<name>.md
+#
+# Each manifest is the whole story for its harness: anything this repo previously
+# linked there and that is no longer listed gets pruned. Nothing is ever copied.
 # Written for bash 3.2 (macOS system bash) — no empty-array expansion under set -u.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_SRC="$REPO_DIR/skills"
-OC_CMD_SRC="$REPO_DIR/opencode/command"
-EXTERNAL_MANIFEST="$REPO_DIR/external-skills.txt"
 
-# Verified against Claude Code and opencode 1.18.12.
-# NOTE: opencode does NOT read ~/.claude/skills, despite what its docs claim,
-# so a skill wanted in both harnesses needs a link in both trees.
+# Verified against Claude Code and opencode 1.18.12. opencode does NOT read
+# ~/.claude/skills, so the two harnesses need separate link trees.
 CLAUDE_SKILLS="$HOME/.claude/skills"
+CLAUDE_AGENTS="$HOME/.claude/agents"
 OC_SKILLS="$HOME/.config/opencode/skills"
-ALL_SKILL_DIRS="$CLAUDE_SKILLS $OC_SKILLS"
-# opencode lists skill-sourced entries only under /skills. A same-named command
-# overrides the entry as source=command, which is what the / prompter shows.
+OC_AGENTS="$HOME/.config/opencode/agent"   # singular, unlike Claude Code's agents/
+OC_CMD_SRC="$REPO_DIR/opencode/command"
 OC_CMD_TARGET="$HOME/.config/opencode/command"
 
 MODE=install
@@ -35,6 +36,35 @@ for arg in "$@"; do
 done
 
 linked=0 skipped=0 removed=0
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# resolve_path <raw> -> absolute path (repo-relative unless ~ or / prefixed)
+resolve_path() {
+  case "$1" in
+    "~/"*) printf '%s\n' "$HOME/${1#\~/}" ;;
+    /*)    printf '%s\n' "$1" ;;
+    ./*)   printf '%s\n' "$REPO_DIR/${1#./}" ;;
+    *)     printf '%s\n' "$REPO_DIR/$1" ;;
+  esac
+}
+
+# read_manifest <file> -> "name<TAB>abs_path" per entry, comments and blanks stripped
+read_manifest() {
+  [ -f "$1" ] || return 0
+  while IFS= read -r raw || [ -n "$raw" ]; do
+    line="${raw%%#*}"
+    line="$(printf '%s' "$line" | awk '{$1=$1;print}')"
+    [ -n "$line" ] || continue
+    n="$(printf '%s' "$line" | awk '{print $1}')"
+    p="$(printf '%s' "$line" | awk '{print $2}')"
+    if [ -z "$p" ]; then
+      echo "MANIFEST  '$n' in $(basename "$(dirname "$1")")/$(basename "$1") has no path; skipping" >&2
+      continue
+    fi
+    printf '%s\t%s\n' "$n" "$(resolve_path "$p")"
+  done < "$1"
+}
 
 # link_one <source> <link path>
 link_one() {
@@ -65,77 +95,57 @@ link_one() {
   fi
 }
 
-# resolve_targets <spec> -> space-separated skill dirs ("" when the spec is unusable)
-resolve_targets() {
-  spec="$1"; out=""
-  case ",$spec," in *,both,*) echo "$ALL_SKILL_DIRS"; return ;; esac
-  case ",$spec," in *,claude,*)   out="$out $CLAUDE_SKILLS" ;; esac
-  case ",$spec," in *,opencode,*) out="$out $OC_SKILLS" ;; esac
-  echo "$out"
-}
-
-[ -d "$SKILL_SRC" ] || { echo "no skills/ dir at $SKILL_SRC" >&2; exit 1; }
-
-# --- skills maintained here: always both harnesses ---
-for src in "$SKILL_SRC"/*/; do
-  [ -f "${src}SKILL.md" ] || continue
-  name="$(basename "$src")"; src="${src%/}"
-  for target_dir in $ALL_SKILL_DIRS; do
-    mkdir -p "$target_dir"
-    link_one "$src" "$target_dir/$name"
-  done
+# Every source path any manifest mentions. A link in a harness dir is considered
+# ours to prune only if it points at one of these, or anywhere inside this repo.
+: > "$WORK/managed-sources"
+for m in "$REPO_DIR/claude/skills.txt" "$REPO_DIR/opencode/skills.txt" \
+         "$REPO_DIR/claude/agents.txt" "$REPO_DIR/opencode/agents.txt"; do
+  read_manifest "$m" | cut -f2 >> "$WORK/managed-sources"
 done
 
-# --- skills maintained elsewhere: linked from their upstream checkout, never copied ---
-if [ -f "$EXTERNAL_MANIFEST" ]; then
-  while IFS= read -r raw || [ -n "$raw" ]; do
-    line="${raw%%#*}"
-    line="$(printf '%s' "$line" | awk '{$1=$1;print}')"
-    [ -n "$line" ] || continue
-    name="$(printf '%s' "$line" | awk '{print $1}')"
-    path="$(printf '%s' "$line" | awk '{print $2}')"
-    spec="$(printf '%s' "$line" | awk '{print $3}')"
-    [ -n "$spec" ] || spec=both
-    if [ -z "$path" ]; then
-      echo "MANIFEST  '$name' has no path; skipping" >&2; skipped=$((skipped+1)); continue
-    fi
-    path="${path/#\~/$HOME}"
+# install_set <manifest> <target dir> <suffix> <label>
+install_set() {
+  manifest="$1"; target_dir="$2"; suffix="$3"; label="$4"
+  read_manifest "$manifest" > "$WORK/entries"
+  : > "$WORK/wanted"
 
-    if [ "$MODE" = uninstall ]; then
-      # Ignore targeting on uninstall so nothing is left behind.
-      for target_dir in $ALL_SKILL_DIRS; do link_one "$path" "$target_dir/$name"; done
-      continue
-    fi
-
-    # A vanished upstream checkout is a warning, not a failure.
-    if [ ! -f "$path/SKILL.md" ]; then
-      echo "MISSING   $name -> $path (no SKILL.md — is the source repo cloned?)" >&2
-      skipped=$((skipped+1)); continue
-    fi
-
-    dirs="$(resolve_targets "$spec" | awk '{$1=$1;print}')"
-    if [ -z "$dirs" ]; then
-      echo "MANIFEST  '$name' has unknown targets '$spec' (use both|claude|opencode)" >&2
-      skipped=$((skipped+1)); continue
-    fi
-
-    for target_dir in $dirs; do
-      mkdir -p "$target_dir"
-      link_one "$path" "$target_dir/$name"
-    done
-
-    # The manifest is authoritative: drop our links from harnesses it no longer targets.
-    for other in $ALL_SKILL_DIRS; do
-      case " $dirs " in *" $other "*) continue ;; esac
-      stale="$other/$name"
-      if [ -L "$stale" ] && [ "$(readlink "$stale")" = "$path" ]; then
-        rm "$stale"; echo "pruned    $stale (no longer targeted)"; removed=$((removed+1))
+  while IFS="$(printf '\t')" read -r name src; do
+    [ -n "${name:-}" ] || continue
+    printf '%s\n' "$name$suffix" >> "$WORK/wanted"
+    if [ "$MODE" = install ]; then
+      # A directory skill needs SKILL.md; an agent is a single .md file.
+      if [ -n "$suffix" ]; then
+        [ -f "$src" ] || { echo "MISSING   $label $name -> $src (no such file)" >&2; skipped=$((skipped+1)); continue; }
+      else
+        [ -f "$src/SKILL.md" ] || { echo "MISSING   $label $name -> $src (no SKILL.md — is the source repo cloned?)" >&2; skipped=$((skipped+1)); continue; }
       fi
-    done
-  done < "$EXTERNAL_MANIFEST"
-fi
+    fi
+    mkdir -p "$target_dir"
+    link_one "$src" "$target_dir/$name$suffix"
+  done < "$WORK/entries"
 
-# --- opencode command wrappers ---
+  [ "$MODE" = install ] || return 0
+  # Prune links we own that this manifest no longer lists.
+  [ -d "$target_dir" ] || return 0
+  for entry in "$target_dir"/*; do
+    [ -L "$entry" ] || continue
+    base="$(basename "$entry")"
+    grep -qxF "$base" "$WORK/wanted" 2>/dev/null && continue
+    tgt="$(readlink "$entry")"
+    ours=no
+    case "$tgt" in "$REPO_DIR"/*) ours=yes ;; esac
+    [ "$ours" = yes ] || grep -qxF "$tgt" "$WORK/managed-sources" 2>/dev/null && ours=yes
+    [ "$ours" = yes ] || continue
+    rm "$entry"; echo "pruned    $entry (not listed for $label)"; removed=$((removed+1))
+  done
+}
+
+install_set "$REPO_DIR/claude/skills.txt"   "$CLAUDE_SKILLS" ""    "claude skills"
+install_set "$REPO_DIR/opencode/skills.txt" "$OC_SKILLS"     ""    "opencode skills"
+install_set "$REPO_DIR/claude/agents.txt"   "$CLAUDE_AGENTS" ".md" "claude agents"
+install_set "$REPO_DIR/opencode/agents.txt" "$OC_AGENTS"     ".md" "opencode agents"
+
+# opencode command wrappers (Claude Code needs none — commands are merged into skills there)
 if [ -d "$OC_CMD_SRC" ]; then
   for src in "$OC_CMD_SRC"/*.md; do
     [ -f "$src" ] || continue
@@ -151,6 +161,5 @@ else
   echo "$linked link(s) in place, $removed pruned, skipped $skipped"
   echo
   echo "Claude Code : run /reload-skills (or restart)"
-  echo "opencode    : restart it — skills and commands are discovered at startup"
-  echo "              verify with 'opencode debug skill' and the / prompter"
+  echo "opencode    : restart it — skills, agents and commands are discovered at startup"
 fi

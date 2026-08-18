@@ -1,0 +1,6 @@
+# Agents installed for OPENCODE (private) -> ~/.config/opencode/agent/<name>.md
+#
+# Format:  <name>  <path-to-a-single-.md-file>
+# Nothing listed yet: opencode's current agents (architect, code-reviewer, explore, ...)
+# are supplied by the ECC plugin at ~/.config/opencode/plugins/ecc-global.ts, not by
+# files in the agent directory, so there is nothing here to take over yet.
