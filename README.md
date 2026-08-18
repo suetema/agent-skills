@@ -41,10 +41,11 @@ Then reload: `/reload-skills` in Claude Code; opencode picks up skills on next s
 Tracked in [`external-skills.txt`](external-skills.txt). This repo records *which* skills I
 want installed; the upstream repo keeps the content.
 
-| Skill | Source | Notes |
-|---|---|---|
-| `market-research` | affaan-m/ECC | Market sizing, competitor comparison, investor dossiers. No external dependencies. |
-| `deep-research` | affaan-m/ECC | Cited multi-source reports. **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
+| Skill | Source | Harnesses | Notes |
+|---|---|---|---|
+| `market-research` | affaan-m/ECC | both | Market sizing, competitor comparison, investor dossiers. No external dependencies. |
+| `deep-research` | affaan-m/ECC | both | Cited multi-source reports. **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
+| 11 engineering skills | affaan-m/ECC | opencode | `tdd-workflow`, `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |
 
 ## Why two symlinks
 
@@ -136,13 +137,21 @@ is no fork to keep in sync and no license question. `install.sh` symlinks each e
 harnesses; `git pull` in the upstream repo is what updates them.
 
 ```
-# <name>  <path>        ~ expands to $HOME, trailing # comments ignored
-market-research  ~/src/ECC/skills/market-research
-deep-research    ~/src/ECC/skills/deep-research    # needs firecrawl + exa MCPs
+# <name>  <path>  [targets]        ~ expands to $HOME, trailing # comments ignored
+market-research  ~/src/ECC/skills/market-research  both
+tdd-workflow     ~/src/ECC/skills/tdd-workflow     opencode
 ```
 
 The `<name>` column is the installed name, so `/<name>` is what you type. It does not have to
 match the upstream directory — rename on the way in if two sources collide.
+
+`targets` is `both` (default), `claude`, `opencode`, or `claude,opencode`. Per-harness scope
+matters when a name is already taken: ECC's `security-review` would shadow Claude Code's
+bundled skill of the same name, so it stays opencode-only.
+
+**The manifest is authoritative.** Narrow an entry's targets and the next run prunes its link
+from the harness it no longer names, reporting `pruned <path> (no longer targeted)`. Nothing
+outside this repo decides what is installed.
 
 If a source repo isn't cloned on this machine, install.sh prints `MISSING <name> -> <path>`,
 counts it as skipped, and creates no broken link. Exit status stays 0, so a partial checkout
@@ -151,6 +160,22 @@ target, which keeps working even if the upstream checkout is gone.
 
 Prompter visibility works the same as for local skills — add `opencode/command/<name>.md`
 that defers to the skill. Nothing about being external changes that.
+
+### Migrating ECC's opencode skills into this repo (2026-08-18)
+
+The 11 engineering skills used to be listed as absolute paths in `skills.paths` inside
+`~/.config/opencode/opencode.json`, which put install decisions in a machine-local file this
+repo could not see. They now live in `external-skills.txt`, and the `skills` key is gone from
+`opencode.json`.
+
+The effective set was verified unchanged across the move — 15 skills before and after, same
+names — by diffing `GET /skill` from a local `opencode serve` on each side. opencode dedupes
+skills by name, so the intermediate state where a skill was both listed and linked resolved to
+one entry rather than a conflict.
+
+If a future ECC install writes `skills.paths` back into `opencode.json`, the same names will
+resolve through whichever source loads them first. Prefer removing the config entries and
+letting the manifest own it.
 
 ### Conflict with ECC's own installer
 
