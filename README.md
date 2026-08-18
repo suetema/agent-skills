@@ -76,6 +76,24 @@ opencode has no equivalent field; use per-skill permission in `~/.config/opencod
 The skill's `description` also carries the constraint in prose, which is what a model
 actually reads when deciding whether to invoke.
 
+## Portability decisions
+
+Deliberate constraints, so a later edit doesn't quietly break one harness:
+
+- **No shell injection in skill bodies.** Claude Code can run `` !`cmd` `` (and ```` ```! ```` blocks)
+  before the body reaches the model, which would make the `handoff` skill's git-state gathering
+  deterministic instead of instructed. opencode has no documented equivalent, so those lines would
+  most likely reach the model as literal text. Skill bodies stay as instructions the model follows.
+- **No `${CLAUDE_SKILL_DIR}` / `${CLAUDE_*}` substitutions**, for the same reason. If a skill ever
+  needs a bundled script, reference it by a path the model can resolve itself.
+- **Claude-Code-only frontmatter is fine.** `argument-hint`, `allowed-tools`, and
+  `disable-model-invocation` are silently ignored by opencode rather than rejected, so they cost
+  nothing. Behavioural guarantees they provide must be restated for opencode — see the permission
+  section above.
+
+If a skill ever genuinely needs a harness-specific feature, fork it into two files and say so here
+rather than degrading it in one harness by accident.
+
 ## Adding a skill
 
 1. `mkdir -p skills/<name>` and write `SKILL.md` with at minimum `name` + `description`.
