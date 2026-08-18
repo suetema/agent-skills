@@ -6,6 +6,12 @@ One `SKILL.md` per skill is the single source of truth. `install.sh` symlinks it
 agent's load path, so editing the file in this repo takes effect in both immediately —
 no copying, no drift.
 
+```
+skills/<name>/SKILL.md      the skill itself, shared by both harnesses
+opencode/command/<name>.md  thin wrapper so /<name> shows in opencode's prompter
+install.sh                  symlinks both into place
+```
+
 ## Install
 
 ```bash
@@ -76,6 +82,40 @@ opencode has no equivalent field; use per-skill permission in `~/.config/opencod
 The skill's `description` also carries the constraint in prose, which is what a model
 actually reads when deciding whether to invoke.
 
+## opencode: getting a skill into the `/` prompter
+
+opencode loads skills fine, but lists skill-sourced entries only under its `/skills`
+picker — they do not appear in the `/` autocomplete when you type. Verified against the
+local server API (`opencode serve` + `GET /command`), where the skill shows up as
+`{"name": "handoff", "source": "skill"}`.
+
+The fix is a same-named command in `opencode/command/<name>.md`. A command with the same
+name as a skill **overrides** the entry rather than duplicating it — one result, with
+`source` flipped from `skill` to `command`, which is what the prompter lists:
+
+```markdown
+---
+description: Compact this session into a context-only briefing for a fresh session
+---
+
+Invoke the `handoff` skill and follow it exactly.
+
+Focus for the next session (may be empty): $ARGUMENTS
+```
+
+The wrapper stays deliberately thin — it defers to the skill instead of restating it, so
+`SKILL.md` remains the single source of truth. `$ARGUMENTS` is parsed by opencode and
+passed through.
+
+Claude Code needs no equivalent: user-invocable skills already appear in its `/` menu.
+
+### Consequence of the permission guard
+
+Because the wrapper asks the model to invoke the skill, `permission.skill.handoff: "ask"`
+(above) will prompt for approval even when you triggered `/handoff` yourself. If that
+friction outweighs the protection, set it to `"allow"` — the skill's `description` still
+carries "use only when the user explicitly asks", which is all opencode gives you.
+
 ## Portability decisions
 
 Deliberate constraints, so a later edit doesn't quietly break one harness:
@@ -97,5 +137,8 @@ rather than degrading it in one harness by accident.
 ## Adding a skill
 
 1. `mkdir -p skills/<name>` and write `SKILL.md` with at minimum `name` + `description`.
-2. `./install.sh`
-3. Commit. Other machines get it with `git pull` — no re-install unless the skill is new.
+2. For opencode prompter visibility, add `opencode/command/<name>.md` that says
+   "Invoke the `<name>` skill and follow it exactly."
+3. `./install.sh`, then restart opencode (it discovers at startup).
+4. Commit. Other machines get it with `git pull` + `./install.sh` for new skills;
+   edits to existing files need no re-install.
