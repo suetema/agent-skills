@@ -1,4 +1,11 @@
 # Agents installed for CLAUDE CODE (work) -> ~/.claude/agents/<name>.md
 #
 # Format:  <name>  <path-to-a-single-.md-file>
-# Nothing listed yet. ECC ships 67 agents under ~/src/ECC/agents/ if you want any.
+# affaan-m/ECC (MIT) — cloned at ~/src/ECC. Linked directly: ECC's agents are
+# already Claude Code format, so they work as-is here.
+#
+# Chosen from ECC's 67 for what this work actually is; the rest are for stacks
+# that are not used (Rust, Go, Swift, React, Vue, Django, ...).
+code-explorer      ~/src/ECC/agents/code-explorer.md
+security-reviewer  ~/src/ECC/agents/security-reviewer.md
+planner            ~/src/ECC/agents/planner.md

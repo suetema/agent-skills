@@ -1,6 +1,14 @@
 # Agents installed for OPENCODE (private) -> ~/.config/opencode/agent/<name>.md
 #
 # Format:  <name>  <path-to-a-single-.md-file>
-# Nothing listed yet: opencode's current agents (architect, code-reviewer, explore, ...)
-# are supplied by the ECC plugin at ~/.config/opencode/plugins/ecc-global.ts, not by
-# files in the agent directory, so there is nothing here to take over yet.
+# opencode's other agents (architect, code-reviewer, explore, ...) are supplied by
+# the ECC plugin at ~/.config/opencode/plugins/ecc-global.ts, not by files here.
+#
+# These three are the SAME agents as in ../claude/agents.txt, but they cannot be
+# the same files: ECC's frontmatter is Claude Code format, and opencode rejects it
+# hard enough to invalidate its entire config (see the README). So they are
+# converted copies authored here — bodies verbatim from upstream, frontmatter
+# translated. Re-convert after an ECC `git pull` if a body changes upstream.
+code-explorer      ./agents/code-explorer.md
+security-reviewer  ./agents/security-reviewer.md
+planner            ./agents/planner.md

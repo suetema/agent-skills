@@ -12,6 +12,7 @@ upstream repos stay the source of truth and editing a file here takes effect imm
 
 ```
 skills/<name>/SKILL.md      skills authored here
+agents/<name>.md            opencode-format agents authored here (see Agents below)
 claude/skills.txt           what is installed for Claude Code   (work)
 claude/agents.txt
 opencode/skills.txt         what is installed for opencode      (private)
@@ -127,9 +128,29 @@ and creates no broken link. Exit status stays 0, so a partial checkout doesn't f
 
 ### Agents
 
-Both agent manifests are currently empty. Claude Code has no agents installed; opencode's
-(`architect`, `code-reviewer`, `explore`, …) come from the ECC plugin at
-`~/.config/opencode/plugins/ecc-global.ts` rather than from files in its agent directory.
+opencode's other agents (`architect`, `code-reviewer`, `explore`, …) come from the ECC plugin at
+`~/.config/opencode/plugins/ecc-global.ts` rather than from files, so the manifests cover only
+what is added here:
+
+| Agent | Source | Why |
+|---|---|---|
+| `code-explorer` | affaan-m/ECC | Traces execution paths through existing code. |
+| `security-reviewer` | affaan-m/ECC | Vulnerability and secrets review. |
+| `planner` | affaan-m/ECC | Implementation plans for larger changes. |
+
+All three are installed in **both** harnesses — but not from the same file, for the reason below.
+Claude Code links them straight from `~/src/ECC/agents/`; opencode gets converted copies in
+`agents/`, keeping the upstream body **verbatim** and translating only the frontmatter. Two
+choices in that conversion are deliberate: `write`/`edit` are pinned `false` rather than omitted
+(an unlisted tool is not a denied tool, and read-only is the point of these three), and `model:`
+is dropped rather than translated, so the agent inherits the session model instead of pinning an
+Anthropic one. **After an ECC `git pull`, re-convert if an upstream body changed** — the copies
+do not track it.
+
+Two overlaps worth knowing rather than tripping over: `security-reviewer` is an *agent* and does
+not collide with Claude Code's bundled `/security-review` *skill*, though its own closing line
+points at "skill: `security-review`", which resolves to ECC's copy in opencode and to the
+bundled one in Claude Code. And `planner` covers similar ground to Claude Code's built-in `Plan`.
 
 **Agent definitions are not portable between the harnesses**, unlike skill bodies. ECC's
 `agents/*.md` are Claude Code format and link into `~/.claude/agents/` as-is. Listing one for
