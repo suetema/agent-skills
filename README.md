@@ -54,6 +54,7 @@ agents and commands at startup.
 | `market-research` | affaan-m/ECC | Private-project tooling; deliberately not in Claude Code. |
 | `deep-research` | affaan-m/ECC | **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
 | 11 engineering skills | affaan-m/ECC | `tdd-workflow`, `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |
+| `prototype` | mattpocock/skills | Throwaway prototypes that answer a design question. Multi-file: `SKILL.md` links `LOGIC.md` and `UI.md`, so it is linked as a directory from a clone rather than copied. |
 
 `security-review` is another reason the split matters: ECC's copy would shadow Claude Code's
 bundled skill of the same name, so it stays on the opencode side only.
@@ -191,6 +192,17 @@ documents manual copying.
 
 Use ECC's installer when you want what symlinks cannot express: hooks, rules, agents, or
 managed uninstall via its install-state tracking.
+
+### Upstream checkouts this repo links into
+
+Clone these to make the manifests resolve on a new machine:
+
+| Clone | Repo | License |
+|---|---|---|
+| `~/src/ECC` | affaan-m/ECC | MIT |
+| `~/src/mattpocock-skills` | mattpocock/skills | MIT |
+
+`install.sh` reports `MISSING` and skips, rather than failing, when one is absent.
 
 ## Portability decisions
 

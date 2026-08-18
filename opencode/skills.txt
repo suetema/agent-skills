@@ -27,3 +27,6 @@ verification-loop  ~/src/ECC/skills/verification-loop
 api-design         ~/src/ECC/skills/api-design
 strategic-compact  ~/src/ECC/skills/strategic-compact
 eval-harness       ~/src/ECC/skills/eval-harness
+
+# mattpocock/skills (MIT) — cloned at ~/src/mattpocock-skills
+prototype          ~/src/mattpocock-skills/skills/engineering/prototype
