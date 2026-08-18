@@ -95,3 +95,54 @@ curl -s http://127.0.0.1:4799/command | python3 -m json.tool | grep -A2 '"<name>
 ```
 
 Claude Code: `/reload-skills`. opencode: full restart.
+
+## Agent formats are NOT portable between harnesses
+
+A skill body works in both harnesses. An agent definition does not — the frontmatter schemas
+differ, and opencode fails hard rather than ignoring what it does not understand.
+
+| Field | Claude Code | opencode |
+|---|---|---|
+| `name` | in frontmatter | taken from the filename |
+| `description` | yes | yes |
+| `tools` | comma string: `Read, Grep, Glob, Bash` | **object map**: `read: true` etc. |
+| `model` | bare alias: `sonnet`, `opus` | **provider-qualified**: `openai/gpt-5.6-sol` |
+| `mode` | n/a | `primary` \| `subagent` \| `all` |
+| `temperature`, `permission` | n/a | supported |
+
+Verified against opencode 1.18.12: dropping ECC's `agents/code-reviewer.md` into
+`~/.config/opencode/agent/` makes the agent API return
+
+```json
+{"name":"ConfigInvalidError","data":{"path":".../agent/ecc-probe.md",
+ "issues":[{"path":["tools"],"message":"Expected object | undefined, got \"Read, Grep, Glob, Bash\""}]}}
+```
+
+That invalidates opencode's **whole** config, so every agent stops resolving — not just the
+offending file. `install.sh` refuses to create such a link and reports `INVALID`.
+
+### Converting a Claude agent to opencode
+
+Author it in this repo as `agents/<name>.md` and list that path in `opencode/agents.txt`. Do not
+edit the upstream file; it has to stay valid for Claude Code.
+
+```markdown
+---
+description: <same description is usually fine>
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+---
+
+<the body, with any Claude-Code-specific instructions removed>
+```
+
+Omit `model` unless you have a reason to pin one — omitting it inherits the session model, which
+is what keeps an Anthropic alias from leaking into a harness configured for other providers.
+Verified: an agent in this shape loads cleanly (agent count went 32 → 33).
+
+Check the result with `curl -s http://127.0.0.1:<port>/agent` against a local `opencode serve`.
+A JSON object with `"name":"ConfigInvalidError"` instead of an array means the config is broken.

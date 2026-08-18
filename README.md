@@ -127,10 +127,25 @@ and creates no broken link. Exit status stays 0, so a partial checkout doesn't f
 
 ### Agents
 
-Both agent manifests are currently empty, for different reasons. Claude Code has no agents
-installed. opencode's agents (`architect`, `code-reviewer`, `explore`, …) come from the ECC
-plugin at `~/.config/opencode/plugins/ecc-global.ts` rather than from files in its agent
-directory, so there is nothing there to take over yet. The plumbing is in place for when there is.
+Both agent manifests are currently empty. Claude Code has no agents installed; opencode's
+(`architect`, `code-reviewer`, `explore`, …) come from the ECC plugin at
+`~/.config/opencode/plugins/ecc-global.ts` rather than from files in its agent directory.
+
+**Agent definitions are not portable between the harnesses**, unlike skill bodies. ECC's
+`agents/*.md` are Claude Code format and link into `~/.claude/agents/` as-is. Listing one for
+opencode is actively dangerous: its `tools: Read, Grep, Glob` comma list yields a
+`ConfigInvalidError` that invalidates opencode's **entire** config, so every agent stops
+resolving. `install.sh` refuses to create such a link:
+
+```
+INVALID   opencode agents code-reviewer: 'tools:' is a Claude-Code comma list;
+          opencode needs an object map.
+```
+
+It also refuses a bare `model:` alias like `sonnet`, which would pin an Anthropic model inside a
+harness configured for other providers. To get the same agent in opencode, author a native one
+as `agents/<name>.md` and list that — see
+[`skills/add-skill/reference.md`](skills/add-skill/reference.md) for the conversion recipe.
 
 ### Migrating ECC's opencode skills into this repo (2026-08-18)
 

@@ -24,6 +24,11 @@ OC_AGENTS="$HOME/.config/opencode/agent"   # singular, unlike Claude Code's agen
 OC_CMD_SRC="$REPO_DIR/opencode/command"
 OC_CMD_TARGET="$HOME/.config/opencode/command"
 
+# Records every link this script created, so a line deleted from a manifest can be
+# pruned even when nothing references its source any more.
+STATE_DIR="$HOME/.local/state/agent-skills"
+STATE_FILE="$STATE_DIR/links.txt"
+
 MODE=install
 FORCE=0
 for arg in "$@"; do
@@ -69,6 +74,7 @@ read_manifest() {
 # link_one <source> <link path>
 link_one() {
   src="$1"; link="$2"
+  [ "$MODE" = install ] && printf '%s\n' "$link" >> "$WORK/current-links"
   if [ "$MODE" = uninstall ]; then
     if [ -L "$link" ] && [ "$(readlink "$link")" = "$src" ]; then
       rm "$link"; echo "unlinked  $link"; removed=$((removed+1))
@@ -120,6 +126,21 @@ install_set() {
         [ -f "$src/SKILL.md" ] || { echo "MISSING   $label $name -> $src (no SKILL.md — is the source repo cloned?)" >&2; skipped=$((skipped+1)); continue; }
       fi
     fi
+    # An agent written for Claude Code breaks opencode's ENTIRE config with
+    # ConfigInvalidError, not just its own file. Refuse rather than link it.
+    if [ "$MODE" = install ] && [ "$target_dir" = "$OC_AGENTS" ]; then
+      if grep -qE '^tools:[[:space:]]*[A-Za-z]' "$src"; then
+        echo "INVALID   $label $name: 'tools:' is a Claude-Code comma list; opencode needs an object map." >&2
+        echo "          Linking it would break opencode's whole config. Convert it first — see" >&2
+        echo "          skills/add-skill/reference.md. Skipping." >&2
+        skipped=$((skipped+1)); continue
+      fi
+      if grep -qE '^model:[[:space:]]*[A-Za-z0-9._-]+[[:space:]]*$' "$src" && ! grep -qE '^model:[^#]*/' "$src"; then
+        echo "INVALID   $label $name: 'model:' must be provider-qualified for opencode" >&2
+        echo "          (e.g. openai/gpt-5.6-sol), not a bare alias like 'sonnet'. Skipping." >&2
+        skipped=$((skipped+1)); continue
+      fi
+    fi
     mkdir -p "$target_dir"
     link_one "$src" "$target_dir/$name$suffix"
   done < "$WORK/entries"
@@ -152,6 +173,32 @@ if [ -d "$OC_CMD_SRC" ]; then
     mkdir -p "$OC_CMD_TARGET"
     link_one "$src" "$OC_CMD_TARGET/$(basename "$src")"
   done
+fi
+
+# Anything we linked on a previous run and no longer want is now orphaned: its source
+# may not be referenced by any manifest, so the per-directory pass above cannot see it.
+if [ "$MODE" = install ]; then
+  touch "$WORK/current-links"
+  if [ -f "$STATE_FILE" ]; then
+    while IFS= read -r old || [ -n "$old" ]; do
+      [ -n "$old" ] || continue
+      grep -qxF "$old" "$WORK/current-links" && continue
+      if [ -L "$old" ]; then
+        rm "$old"; echo "pruned    $old (no longer in any manifest)"; removed=$((removed+1))
+      fi
+    done < "$STATE_FILE"
+  fi
+  mkdir -p "$STATE_DIR"
+  sort -u "$WORK/current-links" > "$STATE_FILE"
+else
+  # Uninstall: drop anything we ever recorded, then forget the state.
+  if [ -f "$STATE_FILE" ]; then
+    while IFS= read -r old || [ -n "$old" ]; do
+      [ -n "$old" ] || continue
+      if [ -L "$old" ]; then rm "$old"; echo "unlinked  $old"; removed=$((removed+1)); fi
+    done < "$STATE_FILE"
+    rm -f "$STATE_FILE"
+  fi
 fi
 
 echo

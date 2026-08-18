@@ -113,18 +113,44 @@ body — the reference file explains the failure this caused.
 7. Commit and push. Explain in the message *why* a skill is scoped to one harness, not just
    that it is.
 
+## Agents
+
+Agents work the same way, through `claude/agents.txt` and `opencode/agents.txt`, with one
+critical difference: **the two harnesses use incompatible agent formats.** A skill body is
+portable; an agent definition is not.
+
+| Manifest | Installs to | Path points at |
+|---|---|---|
+| `claude/agents.txt` | `~/.claude/agents/<name>.md` | a single `.md` file |
+| `opencode/agents.txt` | `~/.config/opencode/agent/<name>.md` | a single `.md` file |
+
+**ECC's agents (`~/src/ECC/agents/*.md`) are Claude Code format.** Link them into Claude Code
+directly — they work as-is. Do **not** list them for opencode: their `tools: Read, Grep, Glob`
+comma list is invalid there and produces a `ConfigInvalidError` that invalidates opencode's
+**entire** config, not just that file. Their `model: sonnet` is a bare Anthropic alias, which
+opencode also rejects — and would pin an Anthropic model in a harness configured for other
+providers.
+
+`install.sh` refuses these rather than linking them, printing `INVALID ... 'tools:' is a
+Claude-Code comma list`. If you see that, the agent needs converting, not forcing.
+
+To get equivalent behaviour in opencode, author a native agent in this repo as
+`agents/<name>.md` and list that. See `reference.md` for the field-by-field differences and a
+conversion recipe.
+
 ## Moving or removing a skill
 
 Manifests are authoritative, not additive. Move a line between manifests, or delete it, and
-the next `./install.sh` prunes the stale link and reports
-`pruned <path> (not listed for <harness>)`. Do not remove links by hand.
+the next `./install.sh` prunes the stale link. Do not remove links by hand.
 
-Pruning only touches links this repo owns — targets inside the repo, or paths some manifest
-mentions — so hand-made links to unlisted sources are left alone.
+Pruning works off a state file at `~/.local/state/agent-skills/links.txt` recording every link
+the script created, so a line deleted from every manifest is still cleaned up. Links this repo
+never created are left alone.
 
 ## Do not
 
 - Copy an upstream skill into `skills/`. Link it.
+- List a Claude-format agent in `opencode/agents.txt`. It breaks opencode's whole config.
 - Add a skill to both harnesses "to be safe". The split is deliberate: work vs private.
 - Hand-edit `~/.claude/skills` or `~/.config/opencode/skills`. The manifests decide.
 - Add `skills.paths` entries to `~/.config/opencode/opencode.json`. That is the
