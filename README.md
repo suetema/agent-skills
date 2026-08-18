@@ -40,10 +40,11 @@ agents and commands at startup.
 
 ### Claude Code (work) — `claude/skills.txt`
 
-| Skill | Source |
-|---|---|
-| `handoff` | this repo |
-| `add-skill` | this repo |
+| Skill | Source | Notes |
+|---|---|---|
+| `handoff` | this repo | |
+| `add-skill` | this repo | |
+| `tdd-workflow` | affaan-m/ECC | The one ECC engineering skill on the work side — the RED/GREEN gate is language-agnostic, though every example in it is JS/TS. Also in opencode. |
 
 ### opencode (private) — `opencode/skills.txt`
 
@@ -53,7 +54,7 @@ agents and commands at startup.
 | `add-skill` | this repo | Also in both. Encodes these conventions so a new session doesn't re-derive them. |
 | `market-research` | affaan-m/ECC | Private-project tooling; deliberately not in Claude Code. |
 | `deep-research` | affaan-m/ECC | **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
-| 11 engineering skills | affaan-m/ECC | `tdd-workflow`, `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |
+| 11 engineering skills | affaan-m/ECC | `tdd-workflow` (also on the work side), `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |
 | `prototype` | mattpocock/skills | Throwaway prototypes that answer a design question. Multi-file: `SKILL.md` links `LOGIC.md` and `UI.md`, so it is linked as a directory from a clone rather than copied. |
 
 `security-review` is another reason the split matters: ECC's copy would shadow Claude Code's

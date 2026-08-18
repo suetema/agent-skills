@@ -10,7 +10,13 @@
 handoff  ./skills/handoff
 add-skill  ./skills/add-skill
 
+# affaan-m/ECC (MIT) — cloned at ~/src/ECC.
+# The ONLY ECC engineering skill on the work side: TDD discipline is what work
+# implementation is asked to follow, and the RED/GREEN gate is language-agnostic
+# even though the skill's examples are all JS/TS.
+tdd-workflow  ~/src/ECC/skills/tdd-workflow
+
 # Deliberately absent: market-research and deep-research are private-project tools,
-# tracked in ../opencode/skills.txt only. ECC's engineering skills likewise stay on
-# the opencode side; note ECC's `security-review` would also shadow Claude Code's
-# bundled skill of the same name.
+# tracked in ../opencode/skills.txt only. ECC's OTHER engineering skills likewise
+# stay on the opencode side; note ECC's `security-review` would also shadow Claude
+# Code's bundled skill of the same name.
