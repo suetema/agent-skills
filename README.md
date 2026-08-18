@@ -43,12 +43,14 @@ agents and commands at startup.
 | Skill | Source |
 |---|---|
 | `handoff` | this repo |
+| `add-skill` | this repo |
 
 ### opencode (private) — `opencode/skills.txt`
 
 | Skill | Source | Notes |
 |---|---|---|
 | `handoff` | this repo | Also installed for Claude Code — listed in both manifests. |
+| `add-skill` | this repo | Also in both. Encodes these conventions so a new session doesn't re-derive them. |
 | `market-research` | affaan-m/ECC | Private-project tooling; deliberately not in Claude Code. |
 | `deep-research` | affaan-m/ECC | **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
 | 11 engineering skills | affaan-m/ECC | `tdd-workflow`, `security-review`, `coding-standards`, `frontend-patterns`, `frontend-slides`, `backend-patterns`, `e2e-testing`, `verification-loop`, `api-design`, `strategic-compact`, `eval-harness` |

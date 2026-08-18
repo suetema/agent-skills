@@ -9,6 +9,7 @@
 
 # Authored in this repo
 handoff            ./skills/handoff
+add-skill          ./skills/add-skill
 
 # affaan-m/ECC (MIT) — cloned at ~/src/ECC. Private research tooling.
 market-research    ~/src/ECC/skills/market-research

@@ -8,6 +8,7 @@
 #   name   installed name — what /<name> becomes
 
 handoff  ./skills/handoff
+add-skill  ./skills/add-skill
 
 # Deliberately absent: market-research and deep-research are private-project tools,
 # tracked in ../opencode/skills.txt only. ECC's engineering skills likewise stay on
