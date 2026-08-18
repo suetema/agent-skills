@@ -152,6 +152,32 @@ target, which keeps working even if the upstream checkout is gone.
 Prompter visibility works the same as for local skills — add `opencode/command/<name>.md`
 that defers to the skill. Nothing about being external changes that.
 
+### Conflict with ECC's own installer
+
+ECC has a first-class selective installer (`./install.sh --skills a,b`, `--profile`,
+`--modules`, `--with/--without`, `--config ecc-install.json`, `--dry-run`). It is *not*
+compatible with the links this repo makes, and it says so loudly:
+
+```
+Error: Refusing to install Claude skill through symlinked Claude skill path:
+'/Users/<me>/.claude/skills/deep-research'
+```
+
+That refusal is the desired behaviour — it will not write through a symlink and corrupt the
+upstream checkout. But it means one skill name belongs to one mechanism. To hand a skill back
+to ECC's installer, drop its line from `external-skills.txt` and re-run `./install.sh` first.
+
+Why symlinks anyway: ECC's skill selection is module-granular, not file-granular. A dry-run of
+`--skills deep-research,market-research` plans **17 file operations** — both skills plus
+`exa-search`, `research-ops`, `documentation-lookup`, five `scientific-*` skills, and platform
+scaffolding (`plugin.json`, `marketplace.json`, `mcp-servers.json`, `auto-update.js`). For
+comparison: `--profile research` is 678 operations, `--profile full` is 1004. Two symlinks are
+two files. ECC sanctions this — its README states each component is fully independent and
+documents manual copying.
+
+Use ECC's installer when you want what symlinks cannot express: hooks, rules, agents, or
+managed uninstall via its install-state tracking.
+
 ## Portability decisions
 
 Deliberate constraints, so a later edit doesn't quietly break one harness:
