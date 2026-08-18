@@ -1,0 +1,12 @@
+# Skills I want installed but do not maintain here.
+#
+# Nothing is copied. install.sh symlinks each path into both harnesses, so the
+# upstream repo stays the source of truth and `git pull` there keeps them current.
+# If a source repo is not cloned on this machine, install.sh warns and skips it.
+#
+# Format:  <name>  <path>        ~ expands to $HOME, trailing # comments ignored
+#          The name is what /<name> becomes; it need not match the directory.
+
+# affaan-m/ECC (MIT) — cloned at ~/src/ECC
+market-research  ~/src/ECC/skills/market-research
+deep-research    ~/src/ECC/skills/deep-research    # needs firecrawl + exa MCPs; inert without them

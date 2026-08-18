@@ -7,9 +7,10 @@ agent's load path, so editing the file in this repo takes effect in both immedia
 no copying, no drift.
 
 ```
-skills/<name>/SKILL.md      the skill itself, shared by both harnesses
+skills/<name>/SKILL.md      skills I maintain, shared by both harnesses
+external-skills.txt         skills I want but don't maintain — linked, never copied
 opencode/command/<name>.md  thin wrapper so /<name> shows in opencode's prompter
-install.sh                  symlinks both into place
+install.sh                  symlinks all of it into place
 ```
 
 ## Install
@@ -29,9 +30,21 @@ Then reload: `/reload-skills` in Claude Code; opencode picks up skills on next s
 
 ## Skills
 
+### Maintained here
+
 | Skill | What it does |
 |---|---|
 | [`handoff`](skills/handoff/SKILL.md) | Compacts the session into a context-only briefing for a fresh session after `/clear`. The next agent reads it and **stops** — it does not resume the work. |
+
+### Linked from elsewhere
+
+Tracked in [`external-skills.txt`](external-skills.txt). This repo records *which* skills I
+want installed; the upstream repo keeps the content.
+
+| Skill | Source | Notes |
+|---|---|---|
+| `market-research` | affaan-m/ECC | Market sizing, competitor comparison, investor dossiers. No external dependencies. |
+| `deep-research` | affaan-m/ECC | Cited multi-source reports. **Requires firecrawl + exa MCPs** — without them the skill describes tool calls it cannot make. |
 
 ## Why two symlinks
 
@@ -115,6 +128,29 @@ Because the wrapper asks the model to invoke the skill, `permission.skill.handof
 (above) will prompt for approval even when you triggered `/handoff` yourself. If that
 friction outweighs the protection, set it to `"allow"` — the skill's `description` still
 carries "use only when the user explicitly asks", which is all opencode gives you.
+
+## Tracking skills you don't maintain
+
+`external-skills.txt` is a manifest, not a vendor directory — no content is copied, so there
+is no fork to keep in sync and no license question. `install.sh` symlinks each entry into both
+harnesses; `git pull` in the upstream repo is what updates them.
+
+```
+# <name>  <path>        ~ expands to $HOME, trailing # comments ignored
+market-research  ~/src/ECC/skills/market-research
+deep-research    ~/src/ECC/skills/deep-research    # needs firecrawl + exa MCPs
+```
+
+The `<name>` column is the installed name, so `/<name>` is what you type. It does not have to
+match the upstream directory — rename on the way in if two sources collide.
+
+If a source repo isn't cloned on this machine, install.sh prints `MISSING <name> -> <path>`,
+counts it as skipped, and creates no broken link. Exit status stays 0, so a partial checkout
+doesn't fail the install. `--uninstall` removes external links too: it matches on the link
+target, which keeps working even if the upstream checkout is gone.
+
+Prompter visibility works the same as for local skills — add `opencode/command/<name>.md`
+that defers to the skill. Nothing about being external changes that.
 
 ## Portability decisions
 

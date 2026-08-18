@@ -7,6 +7,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_SRC="$REPO_DIR/skills"
 OC_CMD_SRC="$REPO_DIR/opencode/command"
+EXTERNAL_MANIFEST="$REPO_DIR/external-skills.txt"
 
 # Verified against Claude Code and opencode 1.18.12.
 # NOTE: opencode does NOT read ~/.claude/skills, despite what its docs claim,
@@ -71,6 +72,30 @@ for src in "$SKILL_SRC"/*/; do
     link_one "$src" "$target_dir/$name"
   done
 done
+
+# Skills maintained elsewhere: linked from their upstream checkout, never copied.
+if [ -f "$EXTERNAL_MANIFEST" ]; then
+  while IFS= read -r raw || [ -n "$raw" ]; do
+    line="${raw%%#*}"
+    line="$(printf '%s' "$line" | awk '{$1=$1;print}')"
+    [ -n "$line" ] || continue
+    name="$(printf '%s' "$line" | awk '{print $1}')"
+    path="$(printf '%s' "$line" | awk '{print $2}')"
+    if [ -z "$path" ]; then
+      echo "MANIFEST  '$name' has no path; skipping" >&2; skipped=$((skipped+1)); continue
+    fi
+    path="${path/#\~/$HOME}"
+    # On uninstall the link still records the path, so a vanished source is fine.
+    if [ "$MODE" = install ] && [ ! -f "$path/SKILL.md" ]; then
+      echo "MISSING   $name -> $path (no SKILL.md — is the source repo cloned?)" >&2
+      skipped=$((skipped+1)); continue
+    fi
+    for target_dir in "${SKILL_TARGETS[@]}"; do
+      mkdir -p "$target_dir"
+      link_one "$path" "$target_dir/$name"
+    done
+  done < "$EXTERNAL_MANIFEST"
+fi
 
 if [ -d "$OC_CMD_SRC" ]; then
   for src in "$OC_CMD_SRC"/*.md; do
