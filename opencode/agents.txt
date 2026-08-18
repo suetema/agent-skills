@@ -9,6 +9,7 @@
 # hard enough to invalidate its entire config (see the README). So they are
 # converted copies authored here — bodies verbatim from upstream, frontmatter
 # translated. Re-convert after an ECC `git pull` if a body changes upstream.
+architect          ./agents/architect.md
 code-explorer      ./agents/code-explorer.md
 security-reviewer  ./agents/security-reviewer.md
 planner            ./agents/planner.md

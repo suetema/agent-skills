@@ -134,11 +134,12 @@ what is added here:
 
 | Agent | Source | Why |
 |---|---|---|
+| `architect` | affaan-m/ECC | System design and technical trade-offs. **Shadows a plugin agent in opencode — see below.** |
 | `code-explorer` | affaan-m/ECC | Traces execution paths through existing code. |
 | `security-reviewer` | affaan-m/ECC | Vulnerability and secrets review. |
 | `planner` | affaan-m/ECC | Implementation plans for larger changes. |
 
-All three are installed in **both** harnesses — but not from the same file, for the reason below.
+All four are installed in **both** harnesses — but not from the same file, for the reason below.
 Claude Code links them straight from `~/src/ECC/agents/`; opencode gets converted copies in
 `agents/`, keeping the upstream body **verbatim** and translating only the frontmatter. Two
 choices in that conversion are deliberate: `write`/`edit` are pinned `false` rather than omitted
@@ -146,6 +147,31 @@ choices in that conversion are deliberate: `write`/`edit` are pinned `false` rat
 is dropped rather than translated, so the agent inherits the session model instead of pinning an
 Anthropic one. **After an ECC `git pull`, re-convert if an upstream body changed** — the copies
 do not track it.
+
+**A conversion's body IS its opencode prompt.** Anything written in it — including a provenance
+comment — becomes text the model reads on every invocation. Provenance therefore lives in
+`opencode/agents.txt` and here, never in the file. Verified: each converted agent's resolved
+prompt is byte-identical to the upstream body.
+
+#### `architect` shadows ECC's own opencode agent
+
+opencode already had an `architect` before this repo added one, supplied by the ECC plugin from
+its catalog at `~/src/ECC/.opencode/opencode.json`. Ours does not merge with it — it **replaces
+it entirely**. Verified against a live `opencode serve`: the resolved prompt is our file's, the
+plugin's is absent, and the agent count is unchanged at 33.
+
+What changes as a result, all of it deliberate but none of it obvious:
+
+| | ECC plugin's version | ours |
+|---|---|---|
+| Prompt | `.opencode/prompts/agents/architect.txt`, 4.6k | `agents/architect.md` body, 7.0k |
+| Model | pinned `anthropic/claude-opus-4-5` | inherits the session model |
+| Tools | `read`, `bash` | `read`, `grep`, `glob` — no `bash` |
+
+The two prompts are genuinely different documents, not two copies of one. Un-pinning the model
+is the point of the conversion recipe; losing `bash` and gaining `grep`/`glob` follows the
+upstream `agents/architect.md` tool list. To hand the name back to the plugin, delete the line
+from `opencode/agents.txt` and re-run `./install.sh`.
 
 Two overlaps worth knowing rather than tripping over: `security-reviewer` is an *agent* and does
 not collide with Claude Code's bundled `/security-review` *skill*, though its own closing line

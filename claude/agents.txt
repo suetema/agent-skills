@@ -6,6 +6,7 @@
 #
 # Chosen from ECC's 67 for what this work actually is; the rest are for stacks
 # that are not used (Rust, Go, Swift, React, Vue, Django, ...).
+architect          ~/src/ECC/agents/architect.md
 code-explorer      ~/src/ECC/agents/code-explorer.md
 security-reviewer  ~/src/ECC/agents/security-reviewer.md
 planner            ~/src/ECC/agents/planner.md
