@@ -202,6 +202,12 @@ Deliberate constraints, so a later edit doesn't quietly break one harness:
   most likely reach the model as literal text. Skill bodies stay as instructions the model follows.
 - **No `${CLAUDE_SKILL_DIR}` / `${CLAUDE_*}` substitutions**, for the same reason. If a skill ever
   needs a bundled script, reference it by a path the model can resolve itself.
+- **A skill body cannot document placeholder syntax at all.** Claude Code substitutes it before
+  the model sees the body, so prose *about* injection becomes injection — backtick-quoting does
+  not protect it. `/add-skill` shipped with exactly this bug and failed with
+  `command not found: cmd`. Put such documentation in a sibling file the skill tells the model to
+  read; substitution does not apply to files read at runtime. See
+  [`skills/add-skill/reference.md`](skills/add-skill/reference.md).
 - **Claude-Code-only frontmatter is fine.** `argument-hint`, `allowed-tools`, and
   `disable-model-invocation` are silently ignored by opencode rather than rejected, so they cost
   nothing. Behavioural guarantees they provide must be restated for opencode — see the permission

@@ -32,6 +32,18 @@ behaviour and the reasons behind the layout; do not re-derive them.
 **Never copy it in.** Add a manifest line pointing at the existing checkout so upstream stays
 the source of truth and `git pull` there keeps it current.
 
+Given a URL rather than a local path, clone the upstream repo once and link into the clone:
+
+```bash
+git clone <repo-url> ~/src/<repo-name>       # skip if already cloned
+ls ~/src/<repo-name>/<path/to/skill>/SKILL.md
+```
+
+Then use `~/src/<repo-name>/<path/to/skill>` as the manifest path. Do not download a single
+`SKILL.md` on its own — a skill may reference sibling files, and a clone can be updated with
+`git pull` while a stray copy cannot. Check the upstream license before adding it to a manifest;
+record it in the manifest comment as is done for ECC.
+
 ## The decision that matters: which harness
 
 Claude Code is **work**. opencode is **private projects**. There is no shared default — a
@@ -69,38 +81,23 @@ upstream directory, so rename on the way in when two sources collide.
 Required frontmatter is `name` and `description`. The description is what a model reads when
 deciding whether to invoke the skill, so state both what it does and when to use it.
 
-Optional, honored by **Claude Code only** — opencode silently ignores them, which is why one
-file serves both:
+**Read `~/src/agent-skills/skills/add-skill/reference.md` before writing the body.** It lists
+the frontmatter each harness honors, the portability rules that keep one file working in both,
+and the opencode wrapper template.
 
-- `disable-model-invocation: true` — only the user can invoke it. Use for anything with side
-  effects, or anything whose timing the user wants to control.
-- `argument-hint`, `allowed-tools` (a permission *grant* for the invoking turn, not a
-  restriction), `arguments`.
-
-Keep the body portable. **Do not use** `` !`cmd` `` shell injection or `${CLAUDE_SKILL_DIR}`
-and friends: they are Claude-Code-only and would reach opencode's model as literal text.
-Write instructions the model follows instead. See the README's *Portability decisions*.
+That content is deliberately not inlined here. Claude Code substitutes placeholder syntax in a
+skill body before the model sees it, so a skill cannot safely document that syntax in its own
+body — the reference file explains the failure this caused.
 
 ## Steps
 
 1. Create `skills/<name>/SKILL.md`, or identify the upstream path for a linked skill.
 2. Add the line to `claude/skills.txt`, `opencode/skills.txt`, or both.
 3. For opencode prompter visibility, add `opencode/command/<name>.md`. opencode lists
-   skill-sourced entries only under `/skills`; a same-named command overrides the entry so
-   it appears in the `/` autocomplete. Keep the wrapper thin so the skill stays the single
-   source of truth:
-
-   ```markdown
-   ---
-   description: <one line, shown in the opencode TUI>
-   ---
-
-   Invoke the `<name>` skill and follow it exactly.
-
-   <what the arguments mean>: $ARGUMENTS
-   ```
-
-   Claude Code needs no wrapper — commands and skills are the same mechanism there.
+   skill-sourced entries only under `/skills`; a same-named command overrides the entry so it
+   appears in the `/` autocomplete. Copy the template from `reference.md` and keep the wrapper
+   thin, so the skill stays the single source of truth. Claude Code needs no wrapper — commands
+   and skills are the same mechanism there.
 4. If the skill should be explicit-invocation-only in opencode, add it to
    `permission.skill` in `~/.config/opencode/opencode.json` as `"ask"`. That file is
    machine-local, so note it in the README — it does not travel with a clone.
