@@ -132,7 +132,7 @@ directory, so there is nothing there to take over yet. The plumbing is in place 
 
 The 11 engineering skills used to be listed as absolute paths in `skills.paths` inside
 `~/.config/opencode/opencode.json`, which put install decisions in a machine-local file this
-repo could not see. They now live in `external-skills.txt`, and the `skills` key is gone from
+repo could not see. They now live in `opencode/skills.txt`, and the `skills` key is gone from
 `opencode.json`.
 
 The effective set was verified unchanged across the move — 15 skills before and after, same
@@ -158,7 +158,7 @@ Error: Refusing to install Claude skill through symlinked Claude skill path:
 
 That refusal is the desired behaviour — it will not write through a symlink and corrupt the
 upstream checkout. But it means one skill name belongs to one mechanism. To hand a skill back
-to ECC's installer, drop its line from `external-skills.txt` and re-run `./install.sh` first.
+to ECC's installer, drop its line from that harness's manifest and re-run `./install.sh` first.
 
 **The guard is per-name, not blanket.** `scripts/lib/install/apply.js` walks every path segment
 from the adapter's target root to the destination and throws if any segment is a symlink. Since
@@ -177,7 +177,7 @@ e2e-testing  eval-harness  strategic-compact  tdd-workflow  verification-loop
 
 opencode dedupes skills by name, so this produces one entry per name rather than an error — but
 which copy wins is load-order dependent. If you ever run ECC's opencode target, narrow those
-five lines out of `external-skills.txt` first so ownership stays unambiguous.
+five lines out of `opencode/skills.txt` first so ownership stays unambiguous.
 
 Why symlinks anyway: ECC's skill selection is module-granular, not file-granular. A dry-run of
 `--skills deep-research,market-research` plans **17 file operations** — both skills plus
