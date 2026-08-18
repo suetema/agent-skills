@@ -173,9 +173,10 @@ names — by diffing `GET /skill` from a local `opencode serve` on each side. op
 skills by name, so the intermediate state where a skill was both listed and linked resolved to
 one entry rather than a conflict.
 
-If a future ECC install writes `skills.paths` back into `opencode.json`, the same names will
-resolve through whichever source loads them first. Prefer removing the config entries and
-letting the manifest own it.
+No ECC adapter writes `skills.paths`, so its installer will not put those entries back — they
+were hand-wired originally. ECC's native installer has in fact never run on this machine: none
+of `~/.claude/ecc/install-state.json`, `~/.opencode/ecc-install-state.json`, or
+`~/.config/opencode/ecc/install-state.json` exist.
 
 ### Conflict with ECC's own installer
 
@@ -191,6 +192,25 @@ Error: Refusing to install Claude skill through symlinked Claude skill path:
 That refusal is the desired behaviour — it will not write through a symlink and corrupt the
 upstream checkout. But it means one skill name belongs to one mechanism. To hand a skill back
 to ECC's installer, drop its line from `external-skills.txt` and re-run `./install.sh` first.
+
+**The guard is per-name, not blanket.** `scripts/lib/install/apply.js` walks every path segment
+from the adapter's target root to the destination and throws if any segment is a symlink. Since
+`~/.claude` and `~/.claude/skills` are real directories, only the leaf names this repo has
+linked are blocked. Every other ECC skill installs alongside them without complaint.
+
+**The opencode target does not collide at all — but can shadow.** ECC's `opencode` adapter
+installs to `~/.opencode/`, not `~/.config/opencode/`, so our links sit outside its target root
+and the symlink guard never sees them. However, opencode *does* read `~/.opencode/skills/` and
+`~/.opencode/commands/` (verified against 1.18.12), and ECC's `opencode` profile plans 44 skills
+there. Five names overlap with what this repo manages:
+
+```
+e2e-testing  eval-harness  strategic-compact  tdd-workflow  verification-loop
+```
+
+opencode dedupes skills by name, so this produces one entry per name rather than an error — but
+which copy wins is load-order dependent. If you ever run ECC's opencode target, narrow those
+five lines out of `external-skills.txt` first so ownership stays unambiguous.
 
 Why symlinks anyway: ECC's skill selection is module-granular, not file-granular. A dry-run of
 `--skills deep-research,market-research` plans **17 file operations** — both skills plus
